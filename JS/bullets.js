@@ -60,7 +60,7 @@ class Tool {
 
         this.calculateTravelAngle(bullet, event);
         projectiles.push(bullet);//push the bullet into an array that'll update all of the bullets' positions on screen
-        gameStage.addChild(bullet)
+        gameStage.addChildAt(bullet, gameStage.getChildIndex(phil.model))
     }
 
     swapTool (){//push q to cycle between at most three unique tools
@@ -68,7 +68,10 @@ class Tool {
             let toolUsing = toolsAvailable[0];
             toolsAvailable.splice(0,1);
             toolsAvailable.push(toolUsing);
-            toolEquipped.model = toolsAvailable[0]
+            toolEquipped.model = toolsAvailable[0];
+
+            toolEquippedSprite.gotoAndPlay(toolsAvailable[0])
+            toolEquippedFadeOut.gotoAndPlay(0);
         }
     }
 
@@ -138,15 +141,19 @@ class Tool {
             let enemyBounds = enemies[enemy].getTransformedBounds();
             if (projectile.intersects(enemyBounds)){
                 enemies[enemy].health = enemies [enemy].health - projectiles[i].damage
-                if (projectiles[i].aName == 'torch'){ //destroy the bullet if its not a tablesaw
+                if (projectiles[i].aName == 'torch'){ //destroy the bullet if its a torch
                     this.bulletDestroy(projectiles[i], i);
                 }          
-                if (enemies[enemy].aName == 'brute ' + enemy){
+                if (enemies[enemy].aName == 'brute ' + enemy){ //or if it hits a brute
                     this.bulletDestroy(projectiles[i], i);
                 }         
-                if (enemies[enemy].health <= 0){
-                    gameStage.removeChild(enemies[enemy]);
-                    enemies.splice(enemy,1);
+                if (enemies[enemy].health <= 0 && enemies[enemy].isDead == false){
+                    enemies[enemy].isDead = true;
+                    enemies[enemy].gotoAndPlay("dead");
+                    setTimeout(function() {
+                        enemySpawnManager.enemyKill(enemy);
+                        console.log('enemy is dead');
+                    }, enemies[enemy].deathTime *1000);
                 }
                 return false;
             }  

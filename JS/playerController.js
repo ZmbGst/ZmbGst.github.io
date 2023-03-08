@@ -29,7 +29,6 @@ class Player {
         return this;
     }
     playerMovement() { //move the player based on wasd or arrow keys. Apply first comments to rest of if statements
-        
         let model= this.model;
         for (let i = 0; i < gameStage.children.length; i++){
             if(gameStage.children[i].property== 'powerup'){
@@ -79,25 +78,28 @@ class Player {
         this.model.rotation = (direction *180/Math.PI)+90
     }
     playerDamage(hp){
-        this.hp -= hp
-     
+        this.hp -= hp;
+        updateHealthbar(this.hp);
+
         if (this.hp <=0){
             this.playerDeath();
             this.hp=0
         }
-        console.log(this.hp + " hp left")
     }
     playerDeath(){
-        createjs.Ticker.removeEventListener("tick", update);
-        createjs.Ticker.removeEventListener("tick", startNextWave);
-
-        gameStage.removeEventListener("stagemousemove", rotatePlayer);
-        gameStage.removeEventListener("click", shoot)
+        setTimeout(function (){
+            createjs.Ticker.removeEventListener("tick", update);
+            createjs.Ticker.removeEventListener("tick", startNextWave);
+    
+            gameStage.removeEventListener("stagemousemove", rotatePlayer);
+            gameStage.removeEventListener("click", shoot)
+            
+            window.removeEventListener("keydown", keysDown);
+            window.removeEventListener("keypress", toolEquipped.swapTool);
+            window.removeEventListener("keyup", keysUp);
+        }, 100)
         
-        window.removeEventListener("keydown", keysDown);
-        window.removeEventListener("keypress", toolEquipped.swapTool);
-        window.removeEventListener("keyup", keysUp);
-        console.log('dead');
+
     }
     playerIntersects(powerup){
         let phil =  this.model.getTransformedBounds();
@@ -106,12 +108,9 @@ class Player {
             switch (powerup.aName){
                 case "tablesaw": 
                     toolsAvailable.push('tablesaw');
-                    console.log('unlcoked tablesaw, press q to cycle between your tools')
                 break;
                 case "propane":
                     toolsAvailable.push('propane');
-                    console.log('unlcoked propane, press q to cycle between your tools')
-
                 break;
                 case 'killAll':
                     for (let i = 0; i < enemies.length; i++){
@@ -122,15 +121,16 @@ class Player {
                 case 'statBoost':
                     damageBoost++;
                     this.speed= this.speed +5;
-                    console.log('you are now stronger and faster!');
                 break;
                 case 'health':
                 default:
                     this.hp = this.hp + 20;
+                    
                     if (this.hp > 100){
                         this.hp = 100;
                     }
-                    console.log('your hp is now ' + this.hp)
+
+                   updateHealthbar(this.hp);
             }
             powerups.splice(powerup,1);
             gameStage.removeChild(powerup);

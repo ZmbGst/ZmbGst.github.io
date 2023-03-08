@@ -5,19 +5,22 @@ class Enemy {
     }
     spawnEnemy(type, rangeIndex){
         
-        let enemy = new createjs.Shape();
-
-        switch (type){
+        let enemy;
+       switch (type){
             case "range":
-                enemy.graphics.beginFill("#25b95f").drawRect(0,0,20,20);
-                enemy.setBounds(0,0,20,20);
-                enemy.damage = 10;
-                enemy.health = 2;
-                enemy.distanceAway = 300;
-                enemy.cooldown = 0;
-                enemy.speed = Math.random() * (10-7)+7;
+                enemy = new createjs.Sprite(slingyScrunklySpritesheet, "spawn");
+                    enemy.scale = .12;
+                    enemy.damage = 10;
+                    enemy.health = 2;
+                    enemy.speed = Math.random() * (10-7)+7;
+                    enemy.deathTime = 14/24 //19 frames in death animation and 24 fps
+                    enemy.distanceAway = 300;
+                    enemy.cooldown = 0;
+                    enemy.isShooting = false;
             break;
             case 'brute':
+                enemy = new createjs.Shape();
+                
                 enemy.graphics.beginFill("#046137").drawRect(0,0,70,70);
                 enemy.setBounds(0,0,70,70);
                 enemy.damage = 30;
@@ -25,24 +28,29 @@ class Enemy {
                 enemy.speed = Math.random() * (8-5)+5;
             break;
             case 'spit':
+                enemy = new createjs.Shape();
+
                 enemy.graphics.beginFill("#ccffcc").drawRect(0,0,10,10);
                 enemy.setBounds(0,0,10,10);
-                enemy.damage = 10;
+                enemy.damage = 5;
                 enemy.health = 1;
                 enemy.speed = Math.random() * (13-7)+7;
             break;
             case 'normal':
             default:
-                enemy.graphics.beginFill("#269a39").drawRect(0,0,30,30);      
-                enemy.setBounds(0,0,30,30);   
-                enemy.damage = 20;   
-                enemy.health = 2; 
-                enemy.speed = Math.random() * (13-7)+7;
+                enemy = new createjs.Sprite(starScrunklySpritesheet, "spawn")
+                    enemy.scale = .1;     
+                    enemy.damage = 10;   
+                    enemy.health = 2; 
+                    enemy.speed = Math.random() * (13-7)+7;
+                    enemy.deathTime = 19/24 //19 frames in death animation and 24 fps
+
             break;
         }
 
         enemy.enemyNumber = enemies.length;
         enemy.isEnemy = true;
+        enemy.isDead = false;
         
         if (type  == undefined){
             enemy.aName = "normal " + enemy.enemyNumber;
@@ -82,13 +90,13 @@ class Enemy {
             enemy.x =enemies[rangeIndex].x;
             enemy.y =enemies[rangeIndex].y;
             this.calculateTravelAngle(enemy, rangeIndex)
-            gameStage.addChild(enemy)
+            gameStage.addChildAt(enemy, gameStage.getChildIndex(phil.model))
             spits.push(enemy)
             return;
         }
         
 
-        gameStage.addChild(enemy)
+        gameStage.addChildAt(enemy, gameStage.getChildIndex(phil.model))
         enemies.push(enemy)
         waveCleared = false;
     }
@@ -127,6 +135,8 @@ class Enemy {
     }
     enemyMovement(){
         if (enemies.length == 0 && !waveCleared){
+            playingPhoneAnim = false;
+            waveCurrentlyGoing = false;
             collectEndTime()
         }
             
@@ -149,48 +159,67 @@ class Enemy {
         for(let i = 0; i < enemies.length; i++){ //enemy movement
             let specificEnemy = enemies[i];
             
-            let changeX = phil.model.x - specificEnemy.x; //distance away from the player
-            let changeY = phil.model.y - specificEnemy.y;
-    
-            let direction = Math.atan2(changeY, changeX); //inner angle based on the triangle
-            specificEnemy.rotation = (direction *180/Math.PI)+90
-
-            if (Math.abs(changeX) > Math.abs(changeY)){ 
-                specificEnemy.deltaX = changeX / Math.abs(changeX)
-                specificEnemy.deltaY = changeY / Math.abs(changeX) 
-            } else if (Math.abs(changeX) < Math.abs(changeY)){
-                specificEnemy.deltaX = changeX / Math.abs(changeY)
-                specificEnemy.deltaY = changeY / Math.abs(changeY)   
-            } else {
-                specificEnemy.deltaX = changeX / Math.abs(changeY)
-                specificEnemy.deltaY = changeY / Math.abs(changeX)
-            }
-
-            let xIncrease = specificEnemy.deltaX * specificEnemy.speed;
-            let yIncrease = specificEnemy.deltaY * specificEnemy.speed;
-            
-            if (specificEnemy.aName == ("range " + specificEnemy.enemyNumber)){ //this code will only go for ranged enemies
-                if (changeX*changeX + changeY*changeY <=  specificEnemy.distanceAway * specificEnemy.distanceAway){ //If the enemy is within the player range
-                    
-                    if (phil.leftright || phil.updown){
-                        xIncrease *=-1*(specificEnemy.speed); //go backwards in x
-                        yIncrease *=-1 *(specificEnemy.speed); //go backwards in y
-                    }
-                    else{
-                        xIncrease = 0; //dont move, you're right where you want to be
-                        yIncrease = 0;
-                    }
-                    specificEnemy.cooldown++;
-                    if (specificEnemy.cooldown >=50){
-                        specificEnemy.cooldown = 0;
-                        this.spawnEnemy('spit', i);
-                    }
-                } 
-            }
-            specificEnemy.x += xIncrease;     
-            specificEnemy.y += yIncrease;     
+            if (String(specificEnemy.currentAnimation) == 'moving' || String(specificEnemy.currentAnimation) == 'idle'){
                 
-            this.enemyIntersects(phil.model, enemies); 
+                let changeX = phil.model.x - specificEnemy.x; //distance away from the player
+                let changeY = phil.model.y - specificEnemy.y;
+        
+                if(changeX < 0){
+                    specificEnemy.scaleX = .1
+                } else if (changeX >= 0){
+                    specificEnemy.scaleX = -.1;
+                }
+    
+                if (Math.abs(changeX) > Math.abs(changeY)){ 
+                    specificEnemy.deltaX = changeX / Math.abs(changeX)
+                    specificEnemy.deltaY = changeY / Math.abs(changeX) 
+                } else if (Math.abs(changeX) < Math.abs(changeY)){
+                    specificEnemy.deltaX = changeX / Math.abs(changeY)
+                    specificEnemy.deltaY = changeY / Math.abs(changeY)   
+                } else {
+                    specificEnemy.deltaX = changeX / Math.abs(changeY)
+                    specificEnemy.deltaY = changeY / Math.abs(changeX)
+                }
+    
+                let xIncrease = specificEnemy.deltaX * specificEnemy.speed;
+                let yIncrease = specificEnemy.deltaY * specificEnemy.speed;
+                
+                if (specificEnemy.aName == ("range " + specificEnemy.enemyNumber) && specificEnemy.isShooting == false){ //this code will only go for ranged enemies
+                    if (changeX*changeX + changeY*changeY <=  specificEnemy.distanceAway * specificEnemy.distanceAway){ //If the enemy is within the player range
+                        
+                        if (phil.leftright || phil.updown){ //if the player is moving
+                            xIncrease *=-0.33*(specificEnemy.speed); //go backwards in x
+                            yIncrease *=-0.33 *(specificEnemy.speed); //go backwards in y
+                            specificEnemy.gotoAndPlay("moving")
+                        }
+                        else{
+                            xIncrease = 0; //dont move, you're right where you want to be
+                            yIncrease = 0;
+                            specificEnemy.cooldown++;
+                            specificEnemy.gotoAndPlay('idle');
+                        }
+                        
+                        if (specificEnemy.cooldown >=50){
+                            specificEnemy.isShooting = true;
+                            specificEnemy.gotoAndPlay('shooting')
+                            setTimeout(function () {
+                                enemySpawnManager.spawnEnemy('spit', i);
+                                specificEnemy.isShooting = false;
+                                specificEnemy.cooldown = 0;
+
+                            }, 600)
+                        }
+                    } 
+                }
+                specificEnemy.x += xIncrease;     
+                specificEnemy.y += yIncrease;     
+                    
+                this.enemyIntersects(phil.model, enemies); 
+            }
         }
+    }
+    enemyKill(enemy){
+        gameStage.removeChild(enemies[enemy]);
+        enemies.splice(enemy,1);
     }
 }
