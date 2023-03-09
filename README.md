@@ -1,2 +1,2 @@
 # ZmbGst.github.io
-personal website
+Zombie Ghost's personal website github
